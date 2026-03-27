@@ -1,0 +1,1 @@
+// TypeScript interfaces and types

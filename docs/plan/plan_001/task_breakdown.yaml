@@ -1,0 +1,695 @@
+plan_id: plan_001
+objective: Create a Node.js Azure Durable Functions application for load testing with HTTP-triggered orchestrations, fan-out/fan-in patterns, state management, and 3 CRUD API routes
+created_at: "2026-03-25T00:00:00Z"
+created_by: requirements-planner
+status: approved
+research_confidence: high
+
+tldr: |
+  Build a Node.js v22 Azure Durable Functions app with TypeScript that demonstrates:
+  - HTTP-triggered orchestrations with status checking
+  - Fan-out/fan-in parallel processing pattern
+  - 3 CRUD API endpoints for load testing
+  - State management (metrics + user sessions) using Azure Storage/Cosmos DB
+  - DefaultAzureCredential + Entra ID authentication
+  - Local development setup with Azure deployment configuration
+
+requirements_summary: |
+  The application will serve as a demo platform for Azure Load Testing, showcasing:
+  1. Durable orchestrations that maintain state across distributed operations
+  2. HTTP APIs that can be stress-tested for response time and error rates
+  3. Real-world patterns: CRUD operations with backend data persistence
+  4. Enterprise-grade authentication using Entra ID
+  5. Infrastructure as Code for reproducible Azure deployments
+
+open_questions: []
+
+risk_assessment:
+  overall_risk_level: medium
+  critical_risks:
+    - scenario: Durable Functions state consistency failures under high concurrent load
+      likelihood: medium
+      impact: high
+      mitigation: Implement proper entity locking, use Durable Entities for concurrent state management, include retry policies
+    - scenario: Cold start latency skewing load test results
+      likelihood: high
+      impact: medium
+      mitigation: Document warm-up procedures, use Azure Functions Premium plan option, include cold start metrics in testing
+    - scenario: Authentication complexity blocking local development
+      likelihood: medium
+      impact: medium
+      mitigation: Provide clear local dev setup with Azurite emulator, include auth bypass for local testing, comprehensive README
+    - scenario: Storage throttling under load affecting test accuracy
+      likelihood: medium
+      impact: medium
+      mitigation: Use appropriate storage tier, implement exponential backoff, document storage performance characteristics
+  assumptions:
+    - Azure subscription available with permissions to create resources
+    - Node.js v22 and npm installed locally
+    - VS Code or compatible IDE for development
+    - Azure CLI and Azure Functions Core Tools available
+    - Load testing will use Azure Load Testing service
+  constraints:
+    - Must use Azure Durable Functions v2.x or later
+    - All authentication via DefaultAzureCredential (no connection strings)
+    - Maximum 3 files changed per task
+    - Maximum 500 lines per task
+    - TypeScript for type safety and better tooling
+
+implementation_specification:
+  code_structure: |
+    Modern Azure Functions v4 structure with TypeScript:
+    - src/
+      - functions/        # HTTP triggers and durable functions
+      - orchestrators/    # Orchestration functions
+      - activities/       # Activity functions
+      - entities/         # Durable entities for state
+      - models/          # TypeScript interfaces and types
+      - services/        # Business logic and data access
+      - utils/           # Helper functions
+    - infra/            # Bicep IaC templates
+    - tests/            # Unit and integration tests
+    - local.settings.json.example
+    - host.json
+    - package.json
+    - tsconfig.json
+  
+  affected_areas:
+    - New project scaffolding (all files)
+    - Azure Functions configuration (host.json, package.json)
+    - Durable Functions orchestrators and activities
+    - HTTP API endpoints (3 CRUD routes)
+    - Storage layer (Azure Storage Tables or Cosmos DB)
+    - Authentication middleware
+    - Infrastructure as Code (Bicep templates)
+  
+  component_details:
+    - component: HTTP Triggers
+      responsibility: Expose 3 CRUD API endpoints and orchestration starter endpoint with status checking
+      interfaces:
+        - POST /api/sessions - Create user session
+        - GET /api/sessions/{id} - Retrieve session
+        - DELETE /api/sessions/{id} - Delete session
+        - POST /api/orchestrate - Start orchestration, returns instanceId
+        - GET /api/orchestrate/{instanceId} - Check orchestration status
+    
+    - component: Durable Orchestrators
+      responsibility: Coordinate long-running workflows with state persistence and fan-out/fan-in logic
+      interfaces:
+        - ProcessWorkflowOrchestrator - Main orchestration with status checkpoints
+        - FanOutFanInOrchestrator - Parallel processing demo with aggregation
+    
+    - component: Activity Functions
+      responsibility: Execute individual units of work called by orchestrators
+      interfaces:
+        - ProcessItemActivity - Simulate work item processing
+        - AggregateResultsActivity - Combine parallel results
+        - UpdateMetricsActivity - Update system metrics
+    
+    - component: Durable Entities
+      responsibility: Manage concurrent state updates for metrics and session counters
+      interfaces:
+        - MetricsEntity - Track request counts, latencies, error rates
+        - SessionEntity - Manage individual session state
+    
+    - component: Storage Service
+      responsibility: Abstract data persistence layer supporting Azure Storage Tables or Cosmos DB
+      interfaces:
+        - IStorageService.create() - Persist new entity
+        - IStorageService.read() - Retrieve entity by ID
+        - IStorageService.delete() - Remove entity
+        - IStorageService.query() - Query entities with filters
+    
+    - component: Authentication Middleware
+      responsibility: Validate Entra ID tokens using DefaultAzureCredential
+      interfaces:
+        - validateToken() - JWT validation middleware
+        - bypassAuthForLocal() - Skip auth in local development
+    
+    - component: Infrastructure (Bicep)
+      responsibility: Deploy Azure resources with proper RBAC and networking
+      interfaces:
+        - main.bicep - Root deployment template
+        - Outputs: functionAppName, storageAccountName, cosmosDbEndpoint
+  
+  dependencies:
+    - component: HTTP Triggers
+      relationship: Calls Durable Orchestrators via DurableClient, calls Storage Service for CRUD operations
+    
+    - component: Durable Orchestrators
+      relationship: Calls Activity Functions, updates Durable Entities for state tracking
+    
+    - component: Activity Functions
+      relationship: Calls Storage Service for data operations, reads/writes via Durable Entities
+    
+    - component: Storage Service
+      relationship: Connects to Azure Storage or Cosmos DB using DefaultAzureCredential
+    
+    - component: Authentication Middleware
+      relationship: Applied to HTTP Triggers, validates against Entra ID
+    
+    - component: Infrastructure
+      relationship: Provisions all Azure resources needed by application components
+  
+  integration_points:
+    - Azure Durable Functions runtime for orchestration state management
+    - Azure Storage Tables or Cosmos DB for application data persistence
+    - Entra ID for authentication and authorization
+    - Azure Monitor/Application Insights for telemetry and logging
+    - Azure Load Testing service for performance testing
+    - DefaultAzureCredential for managed identity authentication
+
+task_relationships:
+  - task: task_001
+    depends_on: []
+    provides_to: [task_002, task_003, task_004, task_005, task_006, task_007]
+    interface: Project structure with package.json, tsconfig.json, basic folder layout
+    format: Node.js project with dependencies installed
+  
+  - task: task_002
+    depends_on: [task_001]
+    provides_to: [task_003, task_004]
+    interface: Configured Durable Functions runtime with host.json and type definitions
+    format: Azure Functions v4 app with durable-functions package configured
+  
+  - task: task_003
+    depends_on: [task_001, task_002]
+    provides_to: [task_006]
+    interface: Storage abstraction with IStorageService interface and implementations
+    format: TypeScript service classes with create/read/delete/query methods
+  
+  - task: task_004
+    depends_on: [task_001, task_002]
+    provides_to: [task_005, task_006]
+    interface: Orchestrator functions and activity functions
+    format: Registered Azure Functions with proper durability configuration
+  
+  - task: task_005
+    depends_on: [task_003, task_004]
+    provides_to: [task_008]
+    interface: 3 CRUD HTTP endpoints and orchestration trigger/status endpoints
+    format: HTTP-triggered Azure Functions returning JSON responses
+  
+  - task: task_006
+    depends_on: [task_001, task_003, task_004]
+    provides_to: [task_008]
+    interface: Durable entities for metrics and session state management
+    format: Entity functions with signal handlers
+  
+  - task: task_007
+    depends_on: [task_001]
+    provides_to: [task_005]
+    interface: Authentication middleware with DefaultAzureCredential
+    format: Express/Functions middleware with token validation
+  
+  - task: task_008
+    depends_on: [task_005, task_006]
+    provides_to: [task_009]
+    interface: Test validation results confirming all endpoints work locally
+    format: Test execution report with pass/fail status
+  
+  - task: task_009
+    depends_on: [task_008]
+    provides_to: [task_010]
+    interface: Bicep templates and deployment scripts
+    format: Infrastructure as Code files with deployment commands
+  
+  - task: task_010
+    depends_on: [task_009]
+    provides_to: []
+    interface: Complete documentation for development, deployment, and load testing
+    format: README.md and LOAD_TESTING.md markdown files
+
+tasks:
+  - id: task_001
+    title: Initialize Node.js Azure Functions project with TypeScript
+    description: |
+      Create project structure for Azure Functions v4 with Node.js v22 and TypeScript:
+      - Initialize npm project with package.json
+      - Install dependencies: @azure/functions, durable-functions, @azure/identity, @azure/data-tables, @azure/cosmos
+      - Configure TypeScript (tsconfig.json) with ES2022 target and strict mode
+      - Create folder structure: src/{functions,orchestrators,activities,entities,models,services,utils}
+      - Add .gitignore, .funcignore, host.json configuration
+      - Configure local.settings.json.example with required app settings
+    execution_order: 1
+    agent: gem-implementer
+    priority: high
+    status: completed
+    depends_on: []
+    context_files: {}
+    estimated_effort: medium
+    estimated_files: 3
+    estimated_lines: 200
+    focus_area: project_setup
+    verification:
+      - package.json contains all required dependencies with correct versions
+      - tsconfig.json configured for Azure Functions with proper module resolution
+      - Folder structure created with all required directories
+      - host.json configured for Durable Functions v2.x
+    acceptance_criteria:
+      - npm install runs without errors
+      - TypeScript compiles without errors
+      - Project structure matches specification
+      - local.settings.json.example includes all required settings
+    failure_modes:
+      - scenario: Dependency version conflicts or incompatible packages
+        likelihood: medium
+        impact: high
+        mitigation: Use latest stable versions, lock dependencies with package-lock.json, test compilation
+    tech_stack:
+      - Node.js v22
+      - TypeScript 5.x
+      - Azure Functions v4
+      - durable-functions v2.x
+      - @azure/identity
+      - @azure/data-tables
+      - @azure/cosmos
+    test_coverage: Basic compilation test
+
+  - id: task_002
+    title: Configure Azure Durable Functions runtime and orchestration settings
+    description: |
+      Set up Durable Functions orchestration infrastructure:
+      - Configure host.json with durableTask extensions and retry policies
+      - Set up DurableClient for starting orchestrations
+      - Configure task hub naming for local vs Azure environments
+      - Set up Application Insights connection string (optional for local)
+      - Create base TypeScript types for orchestration context
+      - Configure DefaultAzureCredential for storage connection
+    execution_order: 2
+    agent: gem-implementer
+    priority: high
+    status: completed
+    depends_on: [task_001]
+    context_files:
+      package.json: Dependencies and scripts
+      host.json: Azure Functions host configuration
+    estimated_effort: small
+    estimated_files: 2
+    estimated_lines: 150
+    focus_area: durable_functions_config
+    verification:
+      - host.json includes durableTask configuration
+      - DurableClient properly initialized with DefaultAzureCredential
+      - Task hub configuration supports both local and Azure environments
+    acceptance_criteria:
+      - Durable Functions runtime initializes without errors
+      - Can create DurableClient instance
+      - Storage connection works with DefaultAzureCredential locally (Azurite)
+    failure_modes:
+      - scenario: DefaultAzureCredential fails in local development
+        likelihood: medium
+        impact: medium
+        mitigation: Provide clear documentation for Azurite setup, include fallback to development credentials
+    tech_stack:
+      - durable-functions v2.x
+      - @azure/identity
+      - Azurite for local development
+    test_coverage: null
+
+  - id: task_003
+    title: Implement storage service abstraction layer
+    description: |
+      Create data persistence layer supporting Azure Storage Tables and Cosmos DB:
+      - Define IStorageService interface with CRUD operations
+      - Implement AzureTableStorageService using @azure/data-tables
+      - Implement CosmosDbStorageService using @azure/cosmos
+      - Configure DefaultAzureCredential for both storage types
+      - Create models for Session and Metrics entities
+      - Add storage factory pattern for runtime selection
+    execution_order: 3
+    agent: gem-implementer
+    priority: high
+    status: completed
+    depends_on: [task_001]
+    context_files:
+      package.json: Dependencies
+      src/models/: Type definitions location
+    estimated_effort: medium
+    estimated_files: 3
+    estimated_lines: 350
+    focus_area: storage_layer
+    verification:
+      - IStorageService interface defines all CRUD operations
+      - Both storage implementations fulfill interface contract
+      - DefaultAzureCredential used for authentication
+      - Factory pattern allows runtime storage selection
+    acceptance_criteria:
+      - Can create, read, and delete entities using both storage types
+      - Proper error handling for storage operations
+      - Type-safe models for Session and Metrics
+      - Works with Azurite locally
+    failure_modes:
+      - scenario: Storage throttling under concurrent load
+        likelihood: medium
+        impact: medium
+        mitigation: Implement exponential backoff retry logic, document performance limits
+    tech_stack:
+      - @azure/data-tables
+      - @azure/cosmos
+      - @azure/identity
+      - TypeScript interfaces
+    test_coverage: Unit tests for CRUD operations
+
+  - id: task_004
+    title: Create durable orchestrators and activity functions
+    description: |
+      Implement orchestration patterns for load testing:
+      - ProcessWorkflowOrchestrator: HTTP-triggered orchestration with status checkpoints
+      - FanOutFanInOrchestrator: Parallel processing with result aggregation
+      - ProcessItemActivity: Simulates work item processing (configurable delay)
+      - AggregateResultsActivity: Combines results from parallel activities
+      - UpdateMetricsActivity: Updates metrics entity with performance data
+      - Proper error handling and retry policies for activities
+    execution_order: 4
+    agent: gem-implementer
+    priority: high
+    status: completed
+    depends_on: [task_001, task_002]
+    context_files:
+      host.json: Durable Functions configuration
+      src/orchestrators/: Orchestrator functions location
+      src/activities/: Activity functions location
+    estimated_effort: large
+    estimated_files: 3
+    estimated_lines: 400
+    focus_area: orchestration_patterns
+    verification:
+      - ProcessWorkflowOrchestrator maintains state across steps
+      - FanOutFanInOrchestrator successfully parallelizes and aggregates
+      - All activity functions are properly registered
+      - Retry policies configured on activities
+    acceptance_criteria:
+      - Orchestrations can be started via HTTP trigger
+      - Status checking works via instanceId
+      - Fan-out/fan-in processes multiple items in parallel
+      - Activities complete with proper error handling
+    failure_modes:
+      - scenario: Orchestration replay causes duplicate operations
+        likelihood: low
+        impact: high
+        mitigation: Use deterministic code in orchestrators, avoid direct I/O, use activities for side effects
+      - scenario: Fan-out creates too many parallel activities
+        likelihood: medium
+        impact: medium
+        mitigation: Limit parallel degree to 10, add configuration for batch size
+    tech_stack:
+      - durable-functions v2.x
+      - TypeScript async/await
+    test_coverage: Integration tests for orchestration flows
+
+  - id: task_005
+    title: Implement 3 CRUD API endpoints with orchestration triggers
+    description: |
+      Create HTTP-triggered functions for load testing:
+      - POST /api/sessions - Create user session (stores in backend)
+      - GET /api/sessions/{id} - Retrieve session by ID
+      - DELETE /api/sessions/{id} - Delete session
+      - POST /api/orchestrate - Start workflow orchestration, return instanceId
+      - GET /api/orchestrate/{instanceId} - Get orchestration status
+      - Integrate with storage service for data persistence
+      - Add request validation and error handling
+      - Return proper HTTP status codes and JSON responses
+    execution_order: 5
+    agent: gem-implementer
+    priority: high
+    status: completed
+    depends_on: [task_003, task_004]
+    context_files:
+      src/services/: Storage service implementations
+      src/orchestrators/: Orchestrator functions
+      src/functions/: HTTP trigger location
+    estimated_effort: medium
+    estimated_files: 3
+    estimated_lines: 350
+    focus_area: api_endpoints
+    verification:
+      - All 5 endpoints are registered and accessible
+      - CRUD operations persist data via storage service
+      - Orchestration endpoints start and track workflows
+      - Proper HTTP status codes returned
+      - Request validation implemented
+    acceptance_criteria:
+      - POST /api/sessions creates session and returns 201
+      - GET /api/sessions/{id} retrieves session or returns 404
+      - DELETE /api/sessions/{id} removes session and returns 204
+      - POST /api/orchestrate starts orchestration and returns instanceId
+      - GET /api/orchestrate/{instanceId} returns runtime status
+    failure_modes:
+      - scenario: Concurrent session operations cause data inconsistency
+        likelihood: medium
+        impact: medium
+        mitigation: Use optimistic concurrency control, implement proper locking
+    tech_stack:
+      - @azure/functions
+      - durable-functions DurableClient
+      - TypeScript
+    test_coverage: API endpoint integration tests
+
+  - id: task_006
+    title: Implement durable entities for metrics and session state
+    description: |
+      Create Durable Entities for concurrent state management:
+      - MetricsEntity: Track request counts, average latency, error rates
+      - SessionCounterEntity: Track active session count
+      - Define entity signal handlers for increment, decrement, aggregate operations
+      - Implement entity locking for concurrent updates
+      - Add entity query functionality
+      - Integrate entities with activities and API endpoints
+    execution_order: 6
+    agent: gem-implementer
+    priority: medium
+    status: completed
+    depends_on: [task_001, task_003, task_004]
+    context_files:
+      src/entities/: Entity functions location
+      src/activities/: Activity functions that update entities
+      src/functions/: HTTP triggers that read entity state
+    estimated_effort: medium
+    estimated_files: 2
+    estimated_lines: 300
+    focus_area: state_management
+    verification:
+      - MetricsEntity properly tracks request metrics
+      - SessionCounterEntity maintains accurate count
+      - Concurrent signal handling works correctly
+      - Entity state persists across function invocations
+    acceptance_criteria:
+      - Entities can be read and updated from activities
+      - Metrics accurately reflect request counts and latencies
+      - No race conditions under concurrent load
+      - Entity state query works via DurableClient
+    failure_modes:
+      - scenario: Entity operations slow down under high concurrent load
+        likelihood: medium
+        impact: low
+        mitigation: Batch entity updates, use multiple entity instances with sharding
+    tech_stack:
+      - durable-functions Durable Entities
+      - TypeScript
+    test_coverage: Entity state consistency tests
+
+  - id: task_007
+    title: Configure DefaultAzureCredential authentication for endpoints
+    description: |
+      Set up Entra ID authentication with bypass for local development:
+      - Configure DefaultAzureCredential for Azure services
+      - Create authentication middleware for HTTP triggers
+      - Implement JWT token validation for Entra ID
+      - Add local development bypass (check environment variable)
+      - Configure CORS for Azure Portal/Load Testing access
+      - Document authentication setup in README
+    execution_order: 7
+    agent: gem-implementer
+    priority: medium
+    status: completed
+    depends_on: [task_001]
+    context_files:
+      src/utils/: Middleware location
+      local.settings.json.example: Environment configuration
+    estimated_effort: small
+    estimated_files: 2
+    estimated_lines: 200
+    focus_area: authentication
+    verification:
+      - DefaultAzureCredential properly configured
+      - Local development works without Entra ID requirements
+      - JWT validation works when enabled
+      - CORS configured appropriately
+    acceptance_criteria:
+      - Authentication can be toggled via environment variable
+      - Valid Entra ID tokens accepted when auth enabled
+      - Local development bypasses auth successfully
+      - Middleware can be applied to HTTP triggers
+    failure_modes:
+      - scenario: DefaultAzureCredential misconfiguration blocks deployment
+        likelihood: low
+        impact: high
+        mitigation: Comprehensive testing in local Azure environment, clear error messages
+    tech_stack:
+      - @azure/identity
+      - jsonwebtoken or @azure/msal-node
+      - TypeScript
+    test_coverage: null
+
+  - id: task_008
+    title: Test all endpoints and orchestrations locally
+    description: |
+      Validate functionality of complete application locally:
+      - Start Azurite storage emulator
+      - Run Azure Functions locally with func start
+      - Test POST /api/sessions creates and persists sessions
+      - Test GET /api/sessions/{id} retrieves correct data
+      - Test DELETE /api/sessions/{id} removes sessions
+      - Test POST /api/orchestrate starts orchestration
+      - Test GET /api/orchestrate/{instanceId} returns correct status
+      - Validate fan-out/fan-in orchestration completes successfully
+      - Verify metrics entity tracks requests accurately
+      - Test error scenarios and validation
+    execution_order: 8
+    agent: gem-browser-tester
+    priority: high
+    status: completed
+    depends_on: [task_005, task_006]
+    context_files:
+      README.md: Local development instructions
+      src/functions/: All HTTP endpoints
+    estimated_effort: medium
+    estimated_files: 0
+    estimated_lines: 0
+    focus_area: local_validation
+    verification:
+      - All API endpoints return expected responses
+      - Orchestrations complete successfully
+      - Data persists correctly in Azurite
+      - Metrics are tracked accurately
+    acceptance_criteria:
+      - Can create, read, and delete sessions via API
+      - Orchestrations start and complete without errors
+      - Status checking returns accurate workflow state
+      - No TypeScript compilation errors
+      - Functions start without warnings
+    failure_modes:
+      - scenario: Azurite connection failures
+        likelihood: low
+        impact: medium
+        mitigation: Clear setup documentation, automated Azurite startup script
+    validation_matrix:
+      - scenario: Session CRUD operations
+        steps:
+          - POST session data to /api/sessions
+          - GET session by ID
+          - DELETE session by ID
+          - GET deleted session (expect 404)
+        expected_result: All operations succeed with correct status codes
+      - scenario: Orchestration workflow
+        steps:
+          - POST to /api/orchestrate with payload
+          - Capture instanceId from response
+          - GET status via /api/orchestrate/{instanceId}
+          - Poll until status is Completed
+        expected_result: Orchestration completes successfully with final output
+      - scenario: Fan-out/fan-in processing
+        steps:
+          - Trigger fan-out orchestration with 5 items
+          - Verify parallel activity execution
+          - Confirm aggregated results
+        expected_result: All 5 items processed in parallel, results aggregated correctly
+
+  - id: task_009
+    title: Create Terraform IaC templates for Azure deployment
+    description: |
+      Build Infrastructure as Code for Azure deployment using Terraform (changed from Bicep per user request):
+      - main.tf: Azure Function App (Consumption or Premium plan)
+      - Storage Account for Durable Functions state
+      - Azure Storage Tables or Cosmos DB for application data
+      - Application Insights for monitoring
+      - Managed Identity for Function App
+      - RBAC assignments (Storage Blob Data Owner, etc.)
+      - variables.tf for environment-specific values
+      - outputs.tf for connection details
+      - README.md with deployment instructions
+    execution_order: 9
+    agent: task-implementer
+    priority: high
+    status: completed
+    depends_on: [task_008]
+    context_files:
+      package.json: Application dependencies
+      host.json: Function configuration
+    estimated_effort: large
+    estimated_files: 3
+    estimated_lines: 400
+    focus_area: infrastructure
+    environment: production
+    requires_approval: true
+    security_sensitive: true
+    verification:
+      - Bicep templates validate without errors
+      - All resources defined with proper configurations
+      - RBAC assignments grant minimum required permissions
+      - Managed Identity configured for Function App
+    acceptance_criteria:
+      - Bicep deployment creates all required resources
+      - Function App configured with Node.js 22 runtime
+      - Managed Identity has access to storage resources
+      - Application Insights connected
+      - Outputs provide necessary connection information
+    failure_modes:
+      - scenario: RBAC permissions insufficient for deployment
+        likelihood: medium
+        impact: high
+        mitigation: Document required subscription permissions, provide pre-deployment validation script
+      - scenario: Resource naming conflicts in Azure
+        likelihood: low
+        impact: medium
+        mitigation: Use unique naming with random suffix, check availability before deployment
+
+  - id: task_010
+    title: Create comprehensive documentation for development and load testing
+    description: |
+      Document the complete application setup and usage:
+      - README.md: Project overview, architecture, local setup, deployment
+      - LOAD_TESTING.md: Guide for Azure Load Testing configuration
+      - Include prerequisites (Node.js, Azure CLI, Azurite)
+      - Local development instructions
+      - Environment variable configuration
+      - API endpoint documentation with examples
+      - Orchestration pattern explanations
+      - Azure deployment steps
+      - Load testing scenarios and metrics
+      - Troubleshooting common issues
+      - Architecture diagram (text-based)
+    execution_order: 10
+    agent: task-implementer
+    priority: medium
+    status: completed
+    depends_on: [task_009]
+    context_files:
+      src/: Complete source code
+      infra/: Infrastructure templates
+      local.settings.json.example: Configuration reference
+    estimated_effort: medium
+    estimated_files: 2
+    estimated_lines: 400
+    focus_area: documentation
+    task_type: documentation
+    audience: developers
+    coverage_matrix:
+      - Project overview and architecture
+      - Local development setup (Azurite, environment)
+      - API endpoint usage with cURL examples
+      - Orchestration patterns explanation
+      - Azure deployment procedures
+      - Load testing configuration and execution
+      - Troubleshooting guide
+    verification:
+      - All setup steps documented clearly
+      - API examples are accurate and tested
+      - Deployment steps are complete
+      - Load testing guide includes scenario examples
+    acceptance_criteria:
+      - Developer can follow README to set up locally
+      - Azure deployment instructions are complete
+      - Load testing guide provides clear examples
+      - Troubleshooting section addresses common issues

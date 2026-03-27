@@ -1,0 +1,12 @@
+.git/
+.vscode/
+node_modules/
+*.ts
+*.md
+.gitignore
+.funcignore
+local.settings.json
+test/
+tsconfig.json
+package.json
+package-lock.json

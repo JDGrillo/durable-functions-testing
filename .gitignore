@@ -1,0 +1,52 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build outputs
+dist/
+*.js
+*.js.map
+*.d.ts
+*.tsbuildinfo
+
+# Azure Functions
+bin/
+obj/
+appsettings.json
+local.settings.json
+
+# Terraform (CRITICAL - contains secrets)
+infra/*.tfstate
+infra/*.tfstate.*
+infra/*.tfvars
+infra/.terraform/
+infra/.terraform.lock.hcl
+
+# Azurite local storage emulator
+__azurite_db_*.json
+__blobstorage__/
+__queuestorage__/
+AzuriteConfig
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.local
+
+# Test coverage
+coverage/
+*.lcov

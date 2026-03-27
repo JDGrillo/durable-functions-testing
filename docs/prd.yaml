@@ -1,0 +1,166 @@
+# Product Requirements Document - Azure Durable Functions Load Testing Demo
+# PRD = Requirements/Decisions lock (independent from task_breakdown.yaml)
+prd_id: prd_001
+version: 1.0.0
+status: draft
+
+features:
+  - name: Session Management CRUD API
+    overview: |
+      HTTP REST endpoints for creating, retrieving, and deleting user sessions with backend persistence.
+      Endpoints: POST /api/sessions, GET /api/sessions/{id}, DELETE /api/sessions/{id}.
+      Designed for load testing with measurable response times and error rates.
+    status: planned
+
+  - name: HTTP-Triggered Durable Orchestrations
+    overview: |
+      Workflow orchestration triggered via HTTP with instance status tracking.
+      Endpoints: POST /api/orchestrate (start), GET /api/orchestrate/{instanceId} (status).
+      Demonstrates long-running stateful workflows with checkpoint persistence.
+    status: planned
+
+  - name: Fan-out/Fan-in Parallel Processing
+    overview: |
+      Orchestration pattern that spawns multiple parallel activity functions and aggregates results.
+      Demonstrates distributed processing with configurable parallelism and result consolidation.
+    status: planned
+
+  - name: State Management with Durable Entities
+    overview: |
+      Concurrent-safe state tracking using Durable Entities for metrics and session counters.
+      MetricsEntity tracks request counts, latencies, error rates. SessionCounterEntity tracks active sessions.
+      Provides accurate state under high concurrent load.
+    status: planned
+
+  - name: Enterprise Authentication
+    overview: |
+      Entra ID authentication using DefaultAzureCredential with Managed Identity support.
+      Local development bypass via environment variable for Azurite testing.
+      CORS configuration for Azure Portal and Load Testing access.
+    status: planned
+
+  - name: Azure Infrastructure as Code
+    overview: |
+      Bicep templates for reproducible Azure deployment with RBAC and Managed Identity.
+      Resources: Function App, Storage Account, Cosmos DB (optional), Application Insights.
+      Automated deployment scripts with environment-specific parameters.
+    status: planned
+
+state_machines:
+  - name: Orchestration Workflow
+    states:
+      - Pending
+      - Running
+      - Processing
+      - Aggregating
+      - Completed
+      - Failed
+      - Terminated
+    transitions:
+      - from: Pending
+        to: Running
+        trigger: Orchestration started via HTTP POST
+      - from: Running
+        to: Processing
+        trigger: Activity functions spawned (fan-out)
+      - from: Processing
+        to: Aggregating
+        trigger: All parallel activities completed
+      - from: Aggregating
+        to: Completed
+        trigger: Results aggregation finished
+      - from: Running
+        to: Failed
+        trigger: Unhandled exception or retry exhausted
+      - from: Running
+        to: Terminated
+        trigger: Manual termination request
+      - from: Completed
+        to: Pending
+        trigger: New orchestration instance created
+
+  - name: Session Lifecycle
+    states:
+      - NonExistent
+      - Active
+      - Deleted
+    transitions:
+      - from: NonExistent
+        to: Active
+        trigger: POST /api/sessions creates session
+      - from: Active
+        to: Active
+        trigger: GET /api/sessions/{id} retrieves session
+      - from: Active
+        to: Deleted
+        trigger: DELETE /api/sessions/{id} removes session
+      - from: Deleted
+        to: NonExistent
+        trigger: Storage cleanup completes
+
+errors:
+  - code: ERR_SESSION_001
+    message: Session not found
+
+  - code: ERR_SESSION_002
+    message: Invalid session data format
+
+  - code: ERR_SESSION_003
+    message: Session creation failed
+
+  - code: ERR_ORCHESTRATION_001
+    message: Orchestration instance not found
+
+  - code: ERR_ORCHESTRATION_002
+    message: Failed to start orchestration
+
+  - code: ERR_ORCHESTRATION_003
+    message: Orchestration execution failed
+
+  - code: ERR_STORAGE_001
+    message: Storage service unavailable
+
+  - code: ERR_STORAGE_002
+    message: Storage operation timeout
+
+  - code: ERR_AUTH_001
+    message: Authentication token invalid or missing
+
+  - code: ERR_AUTH_002
+    message: Insufficient permissions
+
+  - code: ERR_VALIDATION_001
+    message: Request validation failed
+
+decisions:
+  - decision: Use Node.js v22 with TypeScript for type safety and modern async/await patterns
+    rationale: Latest LTS version provides best performance, native ES modules support, and excellent Azure Functions compatibility. TypeScript ensures type safety critical for orchestration code correctness.
+
+  - decision: Support both Azure Storage Tables and Cosmos DB via abstraction layer
+    rationale: Provides flexibility for different performance/cost requirements. Storage Tables for simple demos, Cosmos DB for high-scale scenarios. Abstraction allows easy switching without code changes.
+
+  - decision: Implement Durable Entities instead of external state stores for metrics
+    rationale: Durable Entities provide built-in concurrency control and exactly-once semantics, eliminating race conditions. Native to Durable Functions runtime, no additional infrastructure needed.
+
+  - decision: Use DefaultAzureCredential exclusively (no connection strings)
+    rationale: Enterprise security best practice. Enables Managed Identity in Azure, simplifies credential rotation, supports multiple authentication methods (VS Code, Azure CLI, Managed Identity).
+
+  - decision: Limit fan-out parallelism to 10 concurrent activities
+    rationale: Prevents resource exhaustion and Azure Functions throttling. Configurable limit allows tuning based on load testing requirements while maintaining predictable behavior.
+
+  - decision: Implement local authentication bypass for development
+    rationale: Reduces friction in local development with Azurite. Entra ID setup not required for initial testing, but production-ready auth available when needed.
+
+  - decision: Use Azure Functions Consumption plan by default with Premium plan option
+    rationale: Consumption plan ideal for load testing demos (auto-scale, pay-per-execution). Premium plan option available for scenarios requiring faster cold starts and VNet integration.
+
+  - decision: Structure solution with explicit orchestrators/activities/entities separation
+    rationale: Clear separation of concerns improves maintainability and demonstrates Durable Functions patterns clearly. Makes codebase educational for load testing demos.
+
+  - decision: Include comprehensive local testing validation before Azure deployment
+    rationale: Ensures all functionality works with Azurite before incurring Azure costs. Catches configuration issues early, validates orchestration logic locally.
+
+  - decision: Provide Infrastructure as Code (Bicep) with RBAC automation
+    rationale: Reproducible deployments critical for demo environments. Automated RBAC eliminates manual permission configuration errors, ensures security best practices.
+
+changes: []

@@ -1,0 +1,48 @@
+{
+    "name": "azure-durable-functions-load-test",
+    "version": "1.0.0",
+    "description": "Azure Durable Functions application for load testing demonstrations",
+    "main": "dist/index.js",
+    "scripts": {
+        "build": "tsc",
+        "watch": "tsc --watch",
+        "clean": "rimraf dist",
+        "prestart": "npm run build",
+        "start": "func start",
+        "test": "jest"
+    },
+    "keywords": [
+        "azure-functions",
+        "durable-functions",
+        "load-testing",
+        "typescript"
+    ],
+    "author": "",
+    "license": "MIT",
+    "dependencies": {
+        "@azure/cosmos": "^4.9.2",
+        "@azure/data-tables": "^13.3.2",
+        "@azure/functions": "^4.12.0",
+        "@azure/identity": "^4.13.1",
+        "applicationinsights": "^3.14.0",
+        "durable-functions": "^2.1.4",
+        "jsonwebtoken": "^9.0.3",
+        "jwks-rsa": "^4.0.1"
+    },
+    "overrides": {
+        "validator": "^13.15.21"
+    },
+    "devDependencies": {
+        "@types/jsonwebtoken": "^9.0.10",
+        "@types/node": "^22.0.0",
+        "@typescript-eslint/eslint-plugin": "^7.0.0",
+        "@typescript-eslint/parser": "^7.0.0",
+        "eslint": "^8.57.0",
+        "jest": "^29.7.0",
+        "rimraf": "^5.0.5",
+        "typescript": "^5.4.5"
+    },
+    "engines": {
+        "node": ">=22.0.0"
+    }
+}

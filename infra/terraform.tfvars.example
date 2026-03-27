@@ -1,0 +1,55 @@
+# Example Terraform Variables
+# Copy this file to terraform.tfvars and customize for your environment
+
+# Project Configuration
+project_name = "durable-load-test"
+environment  = "dev"
+location     = "eastus"
+
+# Tags
+tags = {
+  Project     = "Azure Durable Functions Load Testing"
+  ManagedBy   = "Terraform"
+  Environment = "dev"
+  Owner       = "DevOps Team"
+  CostCenter  = "Engineering"
+}
+
+# Function App Configuration
+function_app_sku = "Y1"      # Y1 = Consumption, EP1 = Premium Elastic
+node_version     = "20"       # Node.js version (18, 20, or 22)
+
+# Storage Configuration
+storage_account_tier        = "Standard"
+storage_account_replication = "LRS"     # LRS, GRS, RAGRS, ZRS
+
+# Cosmos DB Configuration (Optional)
+enable_cosmos_db              = falsecosmos_db_consistency_level    = "Session"
+cosmos_db_throughput          = 400
+
+# Application Insights Configuration
+app_insights_retention_days = 90
+
+# Authentication Configuration
+# Set bypass_auth to false in production!
+bypass_auth      = false
+entra_tenant_id  = ""  # Your Azure AD Tenant ID
+entra_client_id  = ""  # Your Azure AD App Registration Client ID
+
+# Networking Configuration
+enable_private_endpoint = false
+allowed_ip_addresses    = []  # e.g., ["1.2.3.4", "5.6.7.8"]
+
+# Example Production Configuration:
+# project_name                = "durable-load-test"
+# environment                 = "prod"
+# location                    = "eastus"
+# function_app_sku            = "EP1"
+# storage_account_tier        = "Standard"
+# storage_account_replication = "GRS"
+# enable_cosmos_db            = true
+# bypass_auth                 = false
+# entra_tenant_id             = "your-tenant-id"
+# entra_client_id             = "your-client-id"
+# enable_private_endpoint     = true
+# allowed_ip_addresses        = ["your-office-ip"]
