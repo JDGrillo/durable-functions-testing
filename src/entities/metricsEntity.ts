@@ -1,4 +1,5 @@
 import * as df from 'durable-functions';
+import { EntityContext } from 'durable-functions';
 
 interface MetricsState {
     requestCount: number;
@@ -22,40 +23,33 @@ function getInitialState(): MetricsState {
  * Metrics Entity
  * Tracks request counts, latencies, and error rates with concurrency control
  */
-const metricsEntity = df.entity(function (context) {
+df.app.entity('metricsEntity', (context: EntityContext<MetricsState>) => {
     let currentValue = context.df.getState(() => getInitialState()) as MetricsState;
 
-    const operations = {
-        recordRequest(latencyMs: number): void {
+    switch (context.df.operationName) {
+        case 'recordRequest': {
+            const latencyMs = context.df.getInput() as number;
             currentValue.requestCount += 1;
             currentValue.totalLatencyMs += latencyMs;
             currentValue.averageLatencyMs = currentValue.totalLatencyMs / currentValue.requestCount;
             currentValue.lastUpdated = new Date().toISOString();
             context.df.setState(currentValue);
-        },
-
-        recordError(): void {
+            break;
+        }
+        case 'recordError': {
             currentValue.errorCount += 1;
             currentValue.lastUpdated = new Date().toISOString();
             context.df.setState(currentValue);
-        },
-
-        getMetrics(): MetricsState {
-            return { ...currentValue };
-        },
-
-        reset(): void {
+            break;
+        }
+        case 'getMetrics': {
+            context.df.return({ ...currentValue });
+            break;
+        }
+        case 'reset': {
             currentValue = getInitialState();
             context.df.setState(currentValue);
-        },
-    };
-
-    const operationName = context.df.operationName;
-    if (operationName && operationName in operations) {
-        const operation = operations[operationName as keyof typeof operations];
-        const input = context.df.getInput() as number;
-        return typeof operation === 'function' ? operation(input) : undefined;
+            break;
+        }
     }
 });
-
-export default metricsEntity;

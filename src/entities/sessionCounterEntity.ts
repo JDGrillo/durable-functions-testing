@@ -1,4 +1,5 @@
 import * as df from 'durable-functions';
+import { EntityContext } from 'durable-functions';
 
 interface SessionCounterState {
     activeCount: number;
@@ -20,43 +21,36 @@ function getInitialState(): SessionCounterState {
  * Session Counter Entity
  * Tracks active session count with atomic increment/decrement operations
  */
-const sessionCounterEntity = df.entity(function (context) {
+df.app.entity('sessionCounterEntity', (context: EntityContext<SessionCounterState>) => {
     let currentValue = context.df.getState(() => getInitialState()) as SessionCounterState;
 
-    const operations = {
-        increment(): void {
+    switch (context.df.operationName) {
+        case 'increment': {
             currentValue.activeCount += 1;
             currentValue.totalCreated += 1;
             currentValue.lastUpdated = new Date().toISOString();
             context.df.setState(currentValue);
-        },
-
-        decrement(): void {
+            break;
+        }
+        case 'decrement': {
             currentValue.activeCount = Math.max(0, currentValue.activeCount - 1);
             currentValue.totalDeleted += 1;
             currentValue.lastUpdated = new Date().toISOString();
             context.df.setState(currentValue);
-        },
-
-        getCount(): number {
-            return currentValue.activeCount;
-        },
-
-        getStats(): SessionCounterState {
-            return { ...currentValue };
-        },
-
-        reset(): void {
+            break;
+        }
+        case 'getCount': {
+            context.df.return(currentValue.activeCount);
+            break;
+        }
+        case 'getStats': {
+            context.df.return({ ...currentValue });
+            break;
+        }
+        case 'reset': {
             currentValue = getInitialState();
             context.df.setState(currentValue);
-        },
-    };
-
-    const operationName = context.df.operationName;
-    if (operationName && operationName in operations) {
-        const operation = operations[operationName as keyof typeof operations];
-        return typeof operation === 'function' ? operation() : undefined;
+            break;
+        }
     }
 });
-
-export default sessionCounterEntity;

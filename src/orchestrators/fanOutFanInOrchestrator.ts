@@ -1,4 +1,5 @@
 import * as df from 'durable-functions';
+import { OrchestrationContext } from 'durable-functions';
 import { FanOutInput, AggregatedResults, ProcessedItem } from '../models/types';
 
 /**
@@ -6,8 +7,8 @@ import { FanOutInput, AggregatedResults, ProcessedItem } from '../models/types';
  * Demonstrates parallel processing pattern with result aggregation
  * Spawns multiple activity functions and combines their outputs
  */
-const fanOutFanInOrchestrator = df.orchestrator(function* (context) {
-    const input: FanOutInput = context.df.getInput();
+df.app.orchestration('fanOutFanInOrchestrator', function* (context: OrchestrationContext) {
+    const input: FanOutInput = context.df.getInput() as FanOutInput;
     const startTime = Date.now();
     
     context.df.setCustomStatus('Starting fan-out processing');
@@ -18,7 +19,7 @@ const fanOutFanInOrchestrator = df.orchestrator(function* (context) {
         const itemCount = Math.min(input.itemCount || 5, 10); // Max 10 items
         
         for (let i = 0; i < itemCount; i++) {
-            const task = context.df.callActivity('ProcessItemActivity', {
+            const task = context.df.callActivity('processItemActivity', {
                 itemId: i,
                 processingDelayMs: input.processingDelayMs || 500,
             });
@@ -34,7 +35,7 @@ const fanOutFanInOrchestrator = df.orchestrator(function* (context) {
 
         // Fan-in: aggregate results
         const aggregated: AggregatedResults = yield context.df.callActivity(
-            'AggregateResultsActivity',
+            'aggregateResultsActivity',
             {
                 items: processedItems,
                 duration: Date.now() - startTime,
@@ -42,7 +43,7 @@ const fanOutFanInOrchestrator = df.orchestrator(function* (context) {
         );
 
         // Update metrics
-        yield context.df.callActivity('UpdateMetricsActivity', {
+        yield context.df.callActivity('updateMetricsActivity', {
             workflowId: context.df.instanceId,
             duration: Date.now() - startTime,
             success: true,
@@ -56,7 +57,7 @@ const fanOutFanInOrchestrator = df.orchestrator(function* (context) {
         context.df.setCustomStatus('Fan-out/fan-in failed');
         
         // Update metrics for failure
-        yield context.df.callActivity('UpdateMetricsActivity', {
+        yield context.df.callActivity('updateMetricsActivity', {
             workflowId: context.df.instanceId,
             duration: Date.now() - startTime,
             success: false,
@@ -66,5 +67,3 @@ const fanOutFanInOrchestrator = df.orchestrator(function* (context) {
         throw error;
     }
 });
-
-export default fanOutFanInOrchestrator;

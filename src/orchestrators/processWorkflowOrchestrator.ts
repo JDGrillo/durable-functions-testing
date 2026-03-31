@@ -1,4 +1,5 @@
 import * as df from 'durable-functions';
+import { OrchestrationContext } from 'durable-functions';
 import { WorkflowInput, WorkflowOutput } from '../models/types';
 
 /**
@@ -6,8 +7,8 @@ import { WorkflowInput, WorkflowOutput } from '../models/types';
  * Demonstrates HTTP-triggered orchestration with status checkpoints
  * Maintains state across distributed operations
  */
-const processWorkflowOrchestrator = df.orchestrator(function* (context) {
-    const input: WorkflowInput = context.df.getInput();
+df.app.orchestration('processWorkflowOrchestrator', function* (context: OrchestrationContext) {
+    const input: WorkflowInput = context.df.getInput() as WorkflowInput;
     const startTime = Date.now();
     
     context.df.setCustomStatus('Starting workflow');
@@ -21,7 +22,7 @@ const processWorkflowOrchestrator = df.orchestrator(function* (context) {
             context.df.setCustomStatus(`Processing step: ${step}`);
             
             // Call activity to process the step
-            const stepResult = yield context.df.callActivity('ProcessItemActivity', {
+            const stepResult = yield context.df.callActivity('processItemActivity', {
                 itemId: step,
                 processingDelayMs: 100,
             });
@@ -34,7 +35,7 @@ const processWorkflowOrchestrator = df.orchestrator(function* (context) {
         }
 
         // Update metrics after workflow completion
-        yield context.df.callActivity('UpdateMetricsActivity', {
+        yield context.df.callActivity('updateMetricsActivity', {
             workflowId: input.workflowId,
             duration: Date.now() - startTime,
             success: true,
@@ -53,7 +54,7 @@ const processWorkflowOrchestrator = df.orchestrator(function* (context) {
 
     } catch (error) {
         // Update metrics for failed workflow
-        yield context.df.callActivity('UpdateMetricsActivity', {
+        yield context.df.callActivity('updateMetricsActivity', {
             workflowId: input.workflowId,
             duration: Date.now() - startTime,
             success: false,
@@ -72,5 +73,3 @@ const processWorkflowOrchestrator = df.orchestrator(function* (context) {
         return output;
     }
 });
-
-export default processWorkflowOrchestrator;

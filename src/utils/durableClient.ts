@@ -17,11 +17,6 @@ export const durableConfig = {
  * This should be called once during app startup
  */
 export function initializeDurableFunctions(): void {
-    // Configure retry policies for activities
-    const defaultRetryOptions = new df.RetryOptions(5000, 3);
-    defaultRetryOptions.backoffCoefficient = 2;
-    defaultRetryOptions.maxRetryIntervalInMilliseconds = 30000;
-    
     app.setup({
         enableHttpStream: true,
     });
@@ -29,6 +24,5 @@ export function initializeDurableFunctions(): void {
     console.log(`Durable Functions initialized with hub: ${durableConfig.hubName}`);
 }
 
-// Export types and classes for use in function implementations
+// Export durable-functions module for use in function implementations
 export { df };
-export { RetryOptions } from 'durable-functions';

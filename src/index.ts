@@ -8,18 +8,17 @@ initializeAppInsights();
 export const APP_NAME = 'azure-durable-functions-load-test';
 export const APP_VERSION = '1.0.0';
 
-// Import orchestrators to ensure they're loaded into memory
-import './orchestrators/processWorkflowOrchestrator';
-import './orchestrators/fanOutFanInOrchestrator';
+// Import orchestrators to register them via df.app.orchestration()
+import './orchestrators/index';
 
-// Import activities to ensure they're loaded into memory
+// Import activities to register them via df.app.activity()
 import './activities/activities';
 
-// Import entities to ensure they're loaded into memory
+// Import entities to register them via df.app.entity()
 import './entities/index';
 
 // Import HTTP functions to register them
 import './functions/sessionApi';
 import './functions/orchestrationApi';
 
-console.log(`${APP_NAME} v${APP_VERSION} - All functions loaded`);
+console.log(`${APP_NAME} v${APP_VERSION} - All functions loaded (durable-functions v3.x)`);

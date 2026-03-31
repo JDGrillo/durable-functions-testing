@@ -335,23 +335,21 @@ See [API Documentation](#api-documentation) above for endpoint examples.
 - [x] **Create Session** - POST to `/api/sessions` returns 201
 - [x] **Get Session** - GET to `/api/sessions/{id}` returns 200
 - [x] **Delete Session** - DELETE to `/api/sessions/{id}` returns 200
-- [ ] **Start Orchestration** - POST to `/api/orchestrate` (currently blocked by durable client binding issue)
-- [ ] **Check Status** - GET orchestration status
-- [ ] **Fan-Out Pattern** - POST to `/api/orchestrate/fanout`
+- [x] **Start Orchestration** - POST to `/api/orchestrate` returns 202
+- [x] **Check Status** - GET orchestration status
+- [x] **Fan-Out Pattern** - POST to `/api/orchestrate/fanout`
 
 ### Known Issues
 
-#### Durable Client Binding Issue
-**Problem**: Orchestration endpoints fail with "Durable client binding not configured"
+#### Local Tooling Assembly Error (Non-blocking)
+**Problem**: On some machines, `func start` may fail with `System.Net.Http, Version=8.0.0.0` assembly not found
 
-**Impact**: Cannot test orchestration and fan-out patterns in local environment
+**Impact**: Prevents local startup. Does not affect Azure deployments.
 
-**Workaround Options**:
-1. Upgrade to `durable-functions` v3.x (breaking changes expected)
-2. Use Programming Model v3 with `function.json` approach
-3. Research Azure Functions v4 + Durable Functions v2 compatibility
-
-**Status**: Documented in task 8 testing results. Does not affect session CRUD endpoints.
+**Fix**: Update Azure Functions Core Tools to the latest version:
+```bash
+npm install -g azure-functions-core-tools@4 --unsafe-perm true
+```
 
 ## 📊 Application Insights Integration
 
@@ -447,6 +445,27 @@ Key considerations:
 - Enable Application Insights for detailed performance metrics
 - Test both session CRUD and orchestration patterns
 - Monitor storage throttling and RU consumption
+
+## ⚙️ Scaling and host.json Tuning
+
+See dedicated guide: [docs/SCALING_AND_CONFIGURATION.md](docs/SCALING_AND_CONFIGURATION.md)
+
+The `host.json` file controls how the function app scales under load. Key settings:
+
+| Setting | Default | Purpose |
+|---------|---------|---------|
+| `maxConcurrentActivityFunctions` | 10 | Activity parallelism per instance |
+| `maxConcurrentOrchestratorFunctions` | 10 | Orchestrator parallelism per instance |
+| `partitionCount` | 4 | Max instances for orchestration processing |
+| `extendedSessionsEnabled` | true | Reduces replay overhead |
+| `maxConcurrentRequests` | 100 | HTTP concurrency per instance |
+| `dynamicConcurrencyEnabled` | true | Auto-tunes concurrency at runtime |
+
+The scaling guide covers:
+- What each `host.json` setting does and how to tune it
+- Scaling profiles for dev, load testing, and production
+- KQL queries to monitor scaling behavior in Application Insights
+- Common scaling pitfalls and how to fix them
 
 ## 🗂️ Project Structure
 

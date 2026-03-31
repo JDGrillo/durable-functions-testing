@@ -1,4 +1,4 @@
-import { app,  HttpRequest, HttpResponseInit, InvocationContext, input } from '@azure/functions';
+import { app,  HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import * as df from 'durable-functions';
 
 /**
@@ -11,15 +11,15 @@ export async function startOrchestration(request: HttpRequest, context: Invocati
             input?: unknown;
         };
 
-        const orchestratorName = body.orchestratorName || 'ProcessWorkflowOrchestrator';
-        const input = body.input || {
+        const orchestratorName = body.orchestratorName || 'processWorkflowOrchestrator';
+        const orchestrationInput = body.input || {
             workflowId: `workflow-${Date.now()}`,
             steps: ['step1', 'step2', 'step3'],
         };
 
         // Get durable client
         const client = df.getClient(context);
-        const instanceId = await client.startNew(orchestratorName, undefined, input);
+        const instanceId = await client.startNew(orchestratorName, { input: orchestrationInput });
 
         context.log(`Started orchestration: ${orchestratorName} with instanceId: ${instanceId}`);
 
@@ -116,7 +116,7 @@ export async function startFanOutOrchestration(request: HttpRequest, context: In
         };
 
         const client = df.getClient(context);
-        const instanceId = await client.startNew('FanOutFanInOrchestrator', undefined, input);
+        const instanceId = await client.startNew('fanOutFanInOrchestrator', { input });
 
         context.log(`Started fan-out orchestration with instanceId: ${instanceId}`);
 
@@ -145,10 +145,7 @@ app.http('startOrchestration', {
     methods: ['POST'],
     authLevel: 'anonymous',
     route: 'orchestrate',
-    extraInputs: [input.generic({
-        type: 'durableClient',
-        name: 'client',
-    })],
+    extraInputs: [df.input.durableClient()],
     handler: startOrchestration,
 });
 
@@ -156,10 +153,7 @@ app.http('getOrchestrationStatus', {
     methods: ['GET'],
     authLevel: 'anonymous',
     route: 'orchestrate/{instanceId}',
-    extraInputs: [input.generic({
-        type: 'durableClient',
-        name: 'client',
-    })],
+    extraInputs: [df.input.durableClient()],
     handler: getOrchestrationStatus,
 });
 
@@ -167,9 +161,6 @@ app.http('startFanOutOrchestration', {
     methods: ['POST'],
     authLevel: 'anonymous',
     route: 'orchestrate/fanout',
-    extraInputs: [input.generic({
-        type: 'durableClient',
-        name: 'client',
-    })],
+    extraInputs: [df.input.durableClient()],
     handler: startFanOutOrchestration,
 });

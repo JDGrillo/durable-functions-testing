@@ -206,8 +206,6 @@ az load create \
   - All orchestrations complete successfully
   - No state corruption
 
-**Note**: Due to known durable client binding issue in local development, this scenario requires Azure deployment to test.
-
 ### Scenario 4: Fan-Out/Fan-In Pattern
 
 **Objective**: Test parallel processing pattern scalability
